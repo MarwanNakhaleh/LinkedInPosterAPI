@@ -1,0 +1,207 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+
+Parameters:
+  ApiPathLinkedInPost:
+    Type: String
+    Default: linkedin-post
+  StageName:
+    Type: String
+    Default: live
+
+Resources:
+  LinkedInPostAPI:
+    Type: AWS::Serverless::Api
+    Description: API for uploading LinkedIn posts to DB
+    Properties:
+      BinaryMediaTypes:
+        - "application/json"
+      Cors:
+        AllowMethods: "'POST'"
+        AllowHeaders: "'X-Forwarded-For,'Content-Type'"
+        AllowOrigin: "'*'" # TODO: lock this down
+        MaxAge: "'600'"
+        AllowCredentials: False
+      # TODO: Add OpenAPI definition files
+      # DefinitionBody: String
+      # DefinitionUri: String | ApiDefinition
+      EndpointConfiguration:
+        Type: EDGE
+      Models:
+        LinkedInPostFormInformation:
+          type: object
+          required:
+            - category
+            - content
+            - links
+          properties:
+            category:
+              type: string
+            content:
+              type: string
+            links:
+              type: string
+      Name: LinkedInPostAPI
+      OpenApiVersion: "3.0.1"
+      StageName: !Ref StageName
+      Tags:
+        ApplicationName: LinkedInPostForm
+      TracingEnabled: False
+
+  ApiResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref LinkedInPostAPI
+      ParentId: !GetAtt
+        - LinkedInPostAPI
+        - RootResourceId
+      PathPart: api
+
+  V1Resource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref LinkedInPostAPI
+      ParentId: !Ref ApiResource
+      PathPart: v1
+
+  LinkedInPostRootResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref LinkedInPostAPI
+      ParentId: !Ref V1Resource
+      PathPart: !Ref ApiPathLinkedInPost
+
+  LambdaPOSTPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:invokeFunction
+      FunctionName: !GetAtt LinkedInPostAPILambda.Arn
+      Principal: apigateway.amazonaws.com
+      SourceArn:
+        !Join [
+          "",
+          [
+            "arn:aws:execute-api:",
+            !Ref "AWS::Region",
+            ":",
+            !Ref "AWS::AccountId",
+            ":",
+            !Ref LinkedInPostAPI,
+            "/*/POST/api/v1/",
+            !Ref ApiPathLinkedInPost,
+          ],
+        ]
+
+  ApiDeployment202103212021:
+    DependsOn: LinkedInPostAPIPOSTMethod
+    Type: AWS::ApiGateway::Deployment
+    Properties:
+      Description: deployment of courses endpoints
+      RestApiId: !Ref LinkedInPostAPI
+      StageName: !Ref StageName
+
+  LinkedInPostAPIPOSTMethod:
+    DependsOn: LambdaPOSTPermission
+    Type: AWS::ApiGateway::Method
+    Properties:
+      ResourceId: !Ref LinkedInPostRootResource
+      RestApiId: !Ref LinkedInPostAPI
+      AuthorizationType: NONE
+      HttpMethod: POST
+      ApiKeyRequired: false
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri:
+          !Join [
+            "",
+            [
+              "arn:aws:apigateway:",
+              !Ref "AWS::Region",
+              ":lambda:path/2015-03-31/functions/",
+              !GetAtt LinkedInPostAPILambda.Arn,
+              "/invocations",
+            ],
+          ]
+
+  LinkedInPostFormLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: LinkedInPostFormLambdaRole
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Principal:
+              Service:
+                - "lambda.amazonaws.com"
+                - "apigateway.amazonaws.com"
+            Action:
+              - "sts:AssumeRole"
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+
+  LinkedInPostAPILambda:
+    Type: AWS::Serverless::Function
+    Description: description
+    Properties:
+      Handler: main.lambda_handler
+      Runtime: python3.9
+      CodeUri: .
+      Timeout: 30
+      FunctionName: LinkedInPostFormFunction
+      MemorySize: 128
+      Role: !GetAtt LinkedInPostFormLambdaRole.Arn
+      Events:
+        LinkedInPostEvent:
+          Type: Api
+          Properties:
+            Method: POST
+            Path: !Join
+              - ""
+              - - "/"
+                - !Ref ApiPathLinkedInPost
+            RestApiId: !Ref LinkedInPostAPI
+      Tags:
+        ApplicationName: LinkedInPostForm
+
+  Authorizer:
+    Type: "AWS::ApiGateway::Authorizer"
+    Properties:
+      AuthorizerCredentials: !GetAtt
+        - LinkedInPostFormLambdaRole
+        - Arn
+      AuthorizerResultTtlInSeconds: 300
+      AuthorizerUri: !Join
+        - ""
+        - - "arn:aws:apigateway:"
+          - !Ref "AWS::Region"
+          - ":lambda:path/2015-03-31/functions/"
+          - !GetAtt
+            - LinkedInPostAPILambda
+            - Arn
+          - /invocations
+      Type: TOKEN
+      IdentitySource: method.request.header.Auth
+      Name: DefaultAuthorizer
+      RestApiId: !Ref LinkedInPostAPI
+
+  StudentInformationTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: "Z2C-FCE-Students"
+      AttributeDefinitions:
+        - AttributeName: "phoneNumber"
+          AttributeType: "S"
+      BillingMode: "PAY_PER_REQUEST"
+      ContributorInsightsSpecification:
+        Enabled: false
+      KeySchema:
+        - AttributeName: "phoneNumber"
+          KeyType: HASH
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: false
+      TableClass: "STANDARD"
+      Tags:
+        - Key: Application
+          Value: Z2C-FCE

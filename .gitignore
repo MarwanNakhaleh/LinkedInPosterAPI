@@ -1,0 +1,21 @@
+# Virtualenv
+# http://iamzed.com/2009/05/07/a-primer-on-virtualenv/
+.Python
+[Bb]in
+[Ii]nclude
+[Ll]ib
+[Ll]ib64
+[Ll]ocal
+[Ss]cripts
+pyvenv.cfg
+.venv
+pip-selfcheck.json
+.DS_Store
+
+# seeding posts DB from file for the time being, will create separate API to update table later
+seed/upsert_posts.sh
+# it has my secrets in here and I'm too lazy to set my LinkedIn access token as an environment variable
+deploy.sh
+
+# lol CircleCI was down on 3/14/2023
+.aws-sam/
