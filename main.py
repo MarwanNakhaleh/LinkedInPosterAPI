@@ -15,7 +15,6 @@ def lambda_handler(event, context):
         event_body = json.loads(b64decode(event["body"]))
 
         posts_table = dynamodb_table(os.environ["POST_TABLE"])
-        categories_table = dynamodb_table(os.environ["CATEGORY_TABLE"])
         
         return {
             "headers": {
