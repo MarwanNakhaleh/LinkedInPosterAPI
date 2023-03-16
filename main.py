@@ -49,7 +49,7 @@ def lambda_handler(event, context):
                     "Content-Type": "application/json"
                 },
                 "statusCode": 201,
-                "body": response
+                "body": str(response)
             }
         else:
             return {
