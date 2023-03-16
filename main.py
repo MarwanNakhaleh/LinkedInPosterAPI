@@ -35,7 +35,7 @@ def lambda_handler(event, context):
                 Item={
                     'content': event_body["content"],
                     'hasBeenPosted': "false",
-                    'id': uuid.uuid4(),
+                    'id': str(uuid.uuid4()),
                     'links': event_body["links"],
                     'category': event_body["category"]
                 }
