@@ -14,7 +14,7 @@ def get_all_categories(table):
     try:
         response = table.scan()
         categories = [x["category"] for x in response["Items"]]
-        log.info("found categories " + categories)
+        log.info("found categories " + str(categories))
         return categories
     except Exception as e:
         log.error("Unable to get categories from table: " + e)
@@ -61,7 +61,7 @@ def lambda_handler(event, context):
                 },
                 "statusCode": 400,
                 "body": json.dumps({
-                    "error": "Choose an existing category from the following: " + categories
+                    "error": "Choose an existing category from the following: " + str(categories)
                 })
             }
     except Exception as e:
