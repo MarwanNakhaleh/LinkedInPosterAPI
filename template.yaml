@@ -162,43 +162,23 @@ Resources:
       Tags:
         ApplicationName: LinkedInPostForm
 
-  Authorizer:
-    Type: "AWS::ApiGateway::Authorizer"
-    Properties:
-      AuthorizerCredentials: !GetAtt
-        - LinkedInPostFormLambdaRole
-        - Arn
-      AuthorizerResultTtlInSeconds: 300
-      AuthorizerUri: !Join
-        - ""
-        - - "arn:aws:apigateway:"
-          - !Ref "AWS::Region"
-          - ":lambda:path/2015-03-31/functions/"
-          - !GetAtt
-            - LinkedInPostAPILambda
-            - Arn
-          - /invocations
-      Type: TOKEN
-      IdentitySource: method.request.header.Auth
-      Name: DefaultAuthorizer
-      RestApiId: !Ref LinkedInPostAPI
-
-  StudentInformationTable:
-    Type: AWS::DynamoDB::Table
-    Properties:
-      TableName: "Z2C-FCE-Students"
-      AttributeDefinitions:
-        - AttributeName: "phoneNumber"
-          AttributeType: "S"
-      BillingMode: "PAY_PER_REQUEST"
-      ContributorInsightsSpecification:
-        Enabled: false
-      KeySchema:
-        - AttributeName: "phoneNumber"
-          KeyType: HASH
-      PointInTimeRecoverySpecification:
-        PointInTimeRecoveryEnabled: false
-      TableClass: "STANDARD"
-      Tags:
-        - Key: Application
-          Value: Z2C-FCE
+  # Authorizer:
+  #   Type: "AWS::ApiGateway::Authorizer"
+  #   Properties:
+  #     AuthorizerCredentials: !GetAtt
+  #       - LinkedInPostFormLambdaRole
+  #       - Arn
+  #     AuthorizerResultTtlInSeconds: 300
+  #     AuthorizerUri: !Join
+  #       - ""
+  #       - - "arn:aws:apigateway:"
+  #         - !Ref "AWS::Region"
+  #         - ":lambda:path/2015-03-31/functions/"
+  #         - !GetAtt
+  #           - LinkedInPostAPILambda
+  #           - Arn
+  #         - /invocations
+  #     Type: TOKEN
+  #     IdentitySource: method.request.header.Auth
+  #     Name: DefaultAuthorizer
+  #     RestApiId: !Ref LinkedInPostAPI
