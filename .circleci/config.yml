@@ -51,7 +51,7 @@ jobs:
           sam validate
           sam build --debug
           sam package --s3-bucket linkedin-poster-deploy --output-template-file out.yaml --region us-east-1
-          sam deploy --template-file out.yaml --stack-name LinkedInPoster --region us-east-1 --no-fail-on-empty-changeset --capabilities CAPABILITY_NAMED_IAM --parameter-overrides AccessToken=$ACCESS_TOKEN
+          sam deploy --template-file out.yaml --stack-name LinkedInPoster --region us-east-1 --no-fail-on-empty-changeset --capabilities CAPABILITY_NAMED_IAM
           chmod +x ./seed/upsert_categories.sh
           ./seed/upsert_categories.sh
           chmod +x ./cleanup.sh
