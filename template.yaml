@@ -8,6 +8,9 @@ Parameters:
   StageName:
     Type: String
     Default: live
+  PostTableName:
+    Type: String
+    Default: LinkedInPosts
 
 Resources:
   LinkedInPostAPI:
@@ -152,6 +155,9 @@ Resources:
       FunctionName: LinkedInPostFormFunction
       MemorySize: 128
       Role: !GetAtt LinkedInPostFormLambdaRole.Arn
+      Environment:
+        Variables:
+          POST_TABLE: !Ref PostTableName
       Events:
         LinkedInPostEvent:
           Type: Api
