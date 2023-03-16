@@ -157,10 +157,7 @@ Resources:
           Type: Api
           Properties:
             Method: POST
-            Path: !Join
-              - ""
-              - - "/"
-                - !Ref ApiPathLinkedInPost
+            Path: "/linkedin-post"
             RestApiId: !Ref LinkedInPostAPI
       Tags:
         ApplicationName: LinkedInPostForm
