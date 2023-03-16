@@ -11,6 +11,9 @@ Parameters:
   PostTableName:
     Type: String
     Default: LinkedInPosts
+  CategoryTableName:
+    Type: String
+    Default: LinkedInCategories
 
 Resources:
   LinkedInPostAPI:
@@ -153,6 +156,15 @@ Resources:
                 Resource:
                   - !ImportValue LinkedInPostTableARN
           PolicyName: WriteToDatabase
+        - PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - "dynamodb:Scan"
+                Resource:
+                  - !ImportValue LinkedInCategoryTableARN
+          PolicyName: ReadCategories
 
   LinkedInPostAPILambda:
     Type: AWS::Serverless::Function
@@ -168,6 +180,7 @@ Resources:
       Environment:
         Variables:
           POST_TABLE: !Ref PostTableName
+          CATEGORY_TABLE: !Ref CategoryTableName
       Events:
         LinkedInPostEvent:
           Type: Api
