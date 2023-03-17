@@ -14,7 +14,7 @@ def get_all_categories(table):
     try:
         response = table.scan()
         categories = [x["category"] for x in response["Items"]]
-        log.info("found categories " + str(categories))
+        # log.info("found categories " + str(categories))
         return categories
     except Exception as e:
         log.error("Unable to get categories from table: " + e)
@@ -23,7 +23,7 @@ def get_all_categories(table):
 
 def lambda_handler(event, context):
     try:
-        log.info(json.dumps(event))
+        # log.info(json.dumps(event))
         event_body = json.loads(b64decode(event["body"]))
 
         posts_table = dynamodb_table(os.environ["POST_TABLE"])
@@ -40,6 +40,8 @@ def lambda_handler(event, context):
                     'category': event_body["category"]
                 }
             )
+            
+            log.info(str(response))
             
             return {
                 "headers": {
