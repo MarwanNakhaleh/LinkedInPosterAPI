@@ -14,12 +14,21 @@ Parameters:
   CategoryTableName:
     Type: String
     Default: LinkedInCategories
+  AuthorizerSecretKey:
+    Type: String
 
 Resources:
   LinkedInPostAPI:
     Type: AWS::Serverless::Api
     Description: API for uploading LinkedIn posts to DB
     Properties:
+      Auth:
+        Authorizers:
+          MyAuthorizer:
+            IdentitySource: $request.header.Authorization
+            FunctionArn: !GetAtt JWTAuthFunction.Arn
+        DefaultAuthorizer: MyAuthorizer
+
       BinaryMediaTypes:
         - "application/json"
       Cors:
@@ -112,23 +121,14 @@ Resources:
     Properties:
       ResourceId: !Ref LinkedInPostRootResource
       RestApiId: !Ref LinkedInPostAPI
-      AuthorizationType: NONE
+      AuthorizationType: CUSTOM
+      AuthorizerId: !Ref Authorizer
       HttpMethod: POST
       ApiKeyRequired: false
       Integration:
         Type: AWS_PROXY
         IntegrationHttpMethod: POST
-        Uri:
-          !Join [
-            "",
-            [
-              "arn:aws:apigateway:",
-              !Ref "AWS::Region",
-              ":lambda:path/2015-03-31/functions/",
-              !GetAtt LinkedInPostAPILambda.Arn,
-              "/invocations",
-            ],
-          ]
+        Uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${LinkedInPostAPILambda.Arn}/invocations"
 
   LinkedInPostFormLambdaRole:
     Type: AWS::IAM::Role
@@ -166,13 +166,67 @@ Resources:
                   - !ImportValue LinkedInCategoryTableARN
           PolicyName: ReadCategories
 
+  JWTAuthFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: authorizer/
+      Handler: authorizer.lambda_handler
+      Runtime: python3.9
+      Timeout: 30
+      FunctionName: LinkedInPostAuthorizer
+      Role: !GetAtt JWTAuthorizerRole.Arn
+      MemorySize: 128
+      Environment:
+        Variables:
+          ACCOUNT_ID: !Ref AWS::AccountId
+          PRINCIPAL_ID: !Ref AWS::AccountId
+          SECRET_KEY: !Ref AuthorizerSecretKey
+          CATEGORY_TABLE: !Ref CategoryTableName
+          REST_API_ID: LinkedInPostAPI
+          REGION: !Ref AWS::Region
+          STAGE: live
+
+  JWTAuthorizerPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:invokeFunction
+      FunctionName: !GetAtt JWTAuthFunction.Arn
+      Principal: apigateway.amazonaws.com
+      # SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${LinkedInPostAPI}/authorizers/${Authorizer}"
+
+  JWTAuthorizerRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: LinkedInPostAuthorizerRole
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Principal:
+              Service:
+                - "lambda.amazonaws.com"
+                - "apigateway.amazonaws.com"
+            Action:
+              - "sts:AssumeRole"
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - lambda:InvokeFunction
+                Resource: "*"
+          PolicyName: CoreIAMAPILambdaPolicy
+
   LinkedInPostAPILambda:
     Type: AWS::Serverless::Function
     Description: description
     Properties:
       Handler: main.lambda_handler
       Runtime: python3.9
-      CodeUri: .
+      CodeUri: api/
       Timeout: 30
       FunctionName: LinkedInPostFormFunction
       MemorySize: 128
@@ -191,23 +245,13 @@ Resources:
       Tags:
         ApplicationName: LinkedInPostForm
 
-  # Authorizer:
-  #   Type: "AWS::ApiGateway::Authorizer"
-  #   Properties:
-  #     AuthorizerCredentials: !GetAtt
-  #       - LinkedInPostFormLambdaRole
-  #       - Arn
-  #     AuthorizerResultTtlInSeconds: 300
-  #     AuthorizerUri: !Join
-  #       - ""
-  #       - - "arn:aws:apigateway:"
-  #         - !Ref "AWS::Region"
-  #         - ":lambda:path/2015-03-31/functions/"
-  #         - !GetAtt
-  #           - LinkedInPostAPILambda
-  #           - Arn
-  #         - /invocations
-  #     Type: TOKEN
-  #     IdentitySource: method.request.header.Auth
-  #     Name: DefaultAuthorizer
-  #     RestApiId: !Ref LinkedInPostAPI
+  Authorizer:
+    Type: AWS::ApiGateway::Authorizer
+    Properties:
+      AuthorizerCredentials: !GetAtt JWTAuthorizerRole.Arn
+      AuthorizerResultTtlInSeconds: 10
+      AuthorizerUri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${JWTAuthFunction.Arn}/invocations"
+      Type: TOKEN
+      IdentitySource: method.request.header.Authorization
+      Name: LinkedInPostAPIAuthorizer
+      RestApiId: !Ref LinkedInPostAPI

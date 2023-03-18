@@ -46,12 +46,12 @@ jobs:
           aws configure set aws_secret_access_key $AWS_SECRET_KEY
           aws configure set default.region us-east-1
           rm -rf test/
-          pip install -r requirements.txt -t .
+          pip install -r authorizer/requirements.txt -t authorizer/
           cfn-lint template.yaml
           sam validate
           sam build --debug
           sam package --s3-bucket linkedin-poster-deploy --output-template-file out.yaml --region us-east-1
-          sam deploy --template-file out.yaml --stack-name LinkedInPosterAPI --region us-east-1 --no-fail-on-empty-changeset --capabilities CAPABILITY_NAMED_IAM
+          sam deploy --template-file out.yaml --stack-name LinkedInPosterAPI --region us-east-1 --no-fail-on-empty-changeset --capabilities CAPABILITY_NAMED_IAM --parameter-overrides AuthorizerSecretKey=$SECRET_KEY
 
 # Invoke jobs via workflows
 # See: https://circleci.com/docs/2.0/configuration-reference/#workflows
