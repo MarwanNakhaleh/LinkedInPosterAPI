@@ -20,11 +20,27 @@ def get_all_categories(table):
         log.error("Unable to get categories from table: " + e)
         return []
     
+def bad_request(reason):
+    return {
+        "headers": {
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "*",
+            "Access-Control-Allow-Credentials": True,
+            "Content-Type": "application/json"
+        },
+        "statusCode": 400,
+        "body": json.dumps({
+            "error": reason
+        })
+    }
 
 def lambda_handler(event, context):
     try:
         # log.info(json.dumps(event))
         event_body = json.loads(b64decode(event["body"]))
+        
+        if len(event_body["content"]) < 12:
+            return bad_request("You need some substance in your post.")
 
         posts_table = dynamodb_table(os.environ["POST_TABLE"])
         categories_table = dynamodb_table(os.environ["CATEGORY_TABLE"])
@@ -54,18 +70,7 @@ def lambda_handler(event, context):
                 "body": str(response)
             }
         else:
-            return {
-                "headers": {
-                    "Access-Control-Allow-Origin": "*",
-                    "Access-Control-Allow-Methods": "*",
-                    "Access-Control-Allow-Credentials": True,
-                    "Content-Type": "application/json"
-                },
-                "statusCode": 400,
-                "body": json.dumps({
-                    "error": "Choose an existing category from the following: " + str(categories)
-                })
-            }
+            return bad_request("Choose an existing category from the following: " + str(categories))
     except Exception as e:
         log.error(str(e))
         return {
