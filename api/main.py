@@ -4,7 +4,7 @@ import json
 import uuid
 from base64 import b64decode
 
-from helpers import dynamodb_table
+from helpers import dynamodb_table, generate_id_from_content
 
 logging.basicConfig(format="%(asctime)s: %(levelname)s: %(message)s")
 log = logging.getLogger("LinkedInPosterAPI")
@@ -35,7 +35,7 @@ def lambda_handler(event, context):
                 Item={
                     'content': event_body["content"],
                     'hasBeenPosted': "false",
-                    'id': str(uuid.uuid4()),
+                    'id': generate_id_from_content(event_body["content"]),
                     'links': event_body["links"],
                     'category': event_body["category"]
                 }
