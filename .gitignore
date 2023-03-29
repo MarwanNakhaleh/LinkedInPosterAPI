@@ -16,3 +16,4 @@ pip-selfcheck.json
 token_generator.py
 deploy.sh
 out.yaml
+*.py.icloud

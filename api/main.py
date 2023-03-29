@@ -41,6 +41,9 @@ def lambda_handler(event, context):
         
         if len(event_body["content"]) < 12:
             return bad_request("You need some substance in your post.")
+        
+        if len(event_body["content"]) > 3000:
+            return bad_request("You can only have 3000 characters in a post.")
 
         posts_table = dynamodb_table(os.environ["POST_TABLE"])
         categories_table = dynamodb_table(os.environ["CATEGORY_TABLE"])
